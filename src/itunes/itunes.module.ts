@@ -4,6 +4,6 @@ import { ItunesService } from './itunes.service';
 
 @Module({
   controllers: [ItunesController],
-  providers: [ItunesService]
+  providers: [ItunesService],
 })
 export class ItunesModule {}
