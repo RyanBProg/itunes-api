@@ -43,13 +43,29 @@ Response payload:
 
 If no artists match the current day/filters, `data` is an empty array with `total: 0`.
 
-## Getting started
+### Run with Docker
+
+1. **Create a `.env` file from the `.example.env`**
+   ```dotenv
+   ITUNES_BASE_URL=https://itunes.apple.com
+   ```
+2. **Build the image**
+   ```bash
+   docker build -t itunes-api .
+   ```
+3. **Run the container**
+   ```bash
+   docker run --env-file .env -p 3000:3000 itunes-api
+   ```
+   This starts the compiled Nest app inside the container and binds it to `http://localhost:3000`.
+
+## Getting started (no Docker)
 
 1. **Install dependencies**
    ```bash
    npm install
    ```
-2. **Create a .env file**
+2. **Create a `.env` file from the `.example.env`**
    ```dotenv
    ITUNES_BASE_URL=https://itunes.apple.com
    ```

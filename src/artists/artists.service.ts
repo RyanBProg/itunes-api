@@ -89,8 +89,6 @@ export class ArtistsService {
 
       const payload = (await response.json()) as unknown;
 
-      console.log(payload);
-
       if (!this.isValidItunesResponse(payload)) {
         throw new ServiceUnavailableException(
           'Unexpected response format from iTunes',
