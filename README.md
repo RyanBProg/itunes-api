@@ -43,14 +43,6 @@ Response payload:
 
 If no artists match the current day/filters, `data` is an empty array with `total: 0`.
 
-## Why it’s built this way
-
-- **Single responsibility modules** – `ArtistsController` only coordinates the DTO and service, while `ArtistsService` owns integration logic. This keeps Nest test modules light and aligns with Nest best practices.
-- **Abortable fetch instead of long-lived HTTP clients** – A simple `fetch` + `AbortController` combo is enough for this single endpoint and lets us surface timeouts explicitly without external dependencies.
-- **Validation at the edge** – Global pipes validate and transform every DTO, preventing stray query params from leaking into business logic. The DTO defaults also document our contract.
-- **Utility extraction** – Helpers like `getDayName`, `normaliseName`, and `toNumber` live in `src/common/utils`, making the service readable and independently testable.
-- **Operational guards** – Throttling and caching at the app module level protect the iTunes API and stabilize responses when traffic spikes.
-
 ## Getting started
 
 1. **Install dependencies**
@@ -81,7 +73,7 @@ E2E tests run with Jest:
 npm test:e2e
 ```
 
-> **Note:** The current Jest (v30) release requires Node.js ≥ 20 because it uses `os.availableParallelism`. Make sure your runtime meets that requirement or downgrade Jest if you need compatibility with older Node versions.
+> **Note:** The current Jest (v30) release requires Node.js ≥ 20.
 
 ## Project structure
 
@@ -90,6 +82,7 @@ src
 ├── app.module.ts           # Global throttling, caching, and module wiring
 ├── main.ts                 # Bootstraps Nest + global ValidationPipe
 ├── artists
+│   ├── artists.module.ts
 │   ├── artists.controller.ts
 │   ├── artists.service.ts
 │   ├── dto
@@ -104,3 +97,7 @@ src
     ├── config.module.ts
     └── env.schema.ts
 ```
+
+## Improvements
+
+- Pagination - Currently, the maxium amount of results are being fetched from the iTunes API from a single call (200) and are filtered/sorted and returned to the client. As the iTunes API doesn't return its own pagination meta data, you might want to recursivley call the endpoint to build an in memory array of all the atrists and then filter/sort that if you want to capture everything. This has it's own draw-backs with memory and rate limiting so I chose not too for this example.
