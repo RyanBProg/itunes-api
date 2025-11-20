@@ -4,6 +4,7 @@ import type { EnvVars } from '../config/env.schema';
 import { GetArtistsTodayDto } from './dto/get-artists-today.dto';
 import { ArtistDto, ArtistsTodayResponseDto } from './dto/artist.dto';
 import { getDayName } from '../common/utils/getDayName';
+import { normaliseName } from '../common/utils/normaliseName';
 
 interface ItunesArtistResult {
   artistId?: number;
@@ -31,7 +32,8 @@ export class ArtistsService {
     const dayInitial = getDayName().charAt(0).toLowerCase();
 
     let filtered = artists.filter(
-      (artist) => artist.name.charAt(0).toLowerCase() === dayInitial,
+      (artist) =>
+        normaliseName(artist.name).charAt(0).toLowerCase() === dayInitial,
     );
 
     if (query.genre) {
