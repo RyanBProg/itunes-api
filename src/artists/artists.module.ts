@@ -6,4 +6,4 @@ import { ArtistsService } from './artists.service';
   controllers: [ArtistsController],
   providers: [ArtistsService],
 })
-export class ItunesModule {}
+export class ArtistsModule {}

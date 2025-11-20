@@ -21,8 +21,9 @@ describe('ArtistsController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('calls ArtistsService.getItems when getTodaysArtists is called', () => {
-    controller.getTodaysArtists();
-    expect(mockArtistsService.getItems).toHaveBeenCalled();
+  it('calls ArtistsService.getItems when getTodaysArtists is called', async () => {
+    const query = { limit: 10, page: 1 };
+    await controller.getTodaysArtists(query);
+    expect(mockArtistsService.getItems).toHaveBeenCalledWith(query);
   });
 });
