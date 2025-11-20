@@ -44,11 +44,14 @@ export class ArtistsService {
     }
 
     const sortDirection = query.sort ?? 'asc';
-    filtered.sort((a, b) =>
-      sortDirection === 'desc'
-        ? b.name.localeCompare(a.name)
-        : a.name.localeCompare(b.name),
-    );
+    filtered.sort((a, b) => {
+      const nameA = normaliseName(a.name).toLowerCase();
+      const nameB = normaliseName(b.name).toLowerCase();
+
+      return sortDirection === 'desc'
+        ? nameB.localeCompare(nameA)
+        : nameA.localeCompare(nameB);
+    });
 
     const limit = query.limit ?? 20;
     const page = query.page ?? 1;

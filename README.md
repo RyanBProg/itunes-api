@@ -1,98 +1,106 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# iTunes Day Artists API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+This project is a small NestJS application that wraps the public iTunes API with domain-specific logic. The single `/artists/today` endpoint returns music artists whose names start with the same letter as the current day (e.g., Wednesday → “W” → “The Weeknd”). The service layers in runtime day detection, optional filtering/sorting, and defensive error handling so clients always get a predictable payload even when iTunes is flaky.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Features
 
-## Description
+- **iTunes integration with runtime day logic** – `ArtistsService` (`src/artists/artists.service.ts`) pulls the `/search` endpoint, extracts `id`, `name`, and `genre`, then filters results with `getDayName` so the response is always contextual to “today”.
+- **Article-aware name filtering** – `normaliseName` (`src/common/utils/normaliseName.ts`) strips common English articles (“The”, “An”, “A”) before comparing first letters, ensuring “The Weeknd” counts toward Wednesday.
+- **Query customization** – `GetArtistsTodayDto` exposes `sort`, `genre`, `limit`, and `page` knobs. The DTO is validated/transformed globally via `ValidationPipe`, and helpers like `toNumber` keep the conversion explicit.
+- **Extras baked in** – Sorting (asc/desc), genre filtering, pagination metadata, and DTO usage satisfy the “Extras” criteria without complicating the controller.
+- **Resilience & observability** – An `AbortController` caps iTunes requests at 5 s, all failures surface as `ServiceUnavailableException`s with descriptive messages, and malformed payloads are rejected before they reach consumers. The app is also wrapped with Nest’s `ThrottlerModule` and global caching (`CacheModule`) to guard the upstream API.
+- **Configuration safety** – Runtime config goes through a Zod schema (`src/config/env.schema.ts`) so missing `ITUNES_BASE_URL` values are caught on boot.
+- **Testable utilities and service layer** – Unit tests cover `ArtistsService`, `getDayName`, `normaliseName`, and `toNumber`, making the filtering and parsing logic easy to evolve.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## API
 
-## Project setup
-
-```bash
-$ npm install
+```
+GET /artists/today
 ```
 
-## Compile and run the project
+Query parameters (all optional):
 
-```bash
-# development
-$ npm run start
+| Name    | Type     | Default | Notes                                      |
+| ------- | -------- | ------- | ------------------------------------------ | ------------------------------------- |
+| `sort`  | `asc     | desc`   | `asc`                                      | Alphabetical order on the artist name |
+| `genre` | `string` | —       | Exact match (case-insensitive) with iTunes |
+| `limit` | `number` | `20`    | Max 100, used for pagination size          |
+| `page`  | `number` | `1`     | 1-based pagination index                   |
 
-# watch mode
-$ npm run start:dev
+Response payload:
 
-# production mode
-$ npm run start:prod
+```json
+{
+  "data": [{ "id": 123, "name": "Metallica", "genre": "Rock" }],
+  "meta": {
+    "total": 42,
+    "page": 1,
+    "limit": 20,
+    "hasNextPage": true
+  }
+}
 ```
 
-## Run tests
+If no artists match the current day/filters, `data` is an empty array with `total: 0`.
+
+## Why it’s built this way
+
+- **Single responsibility modules** – `ArtistsController` only coordinates the DTO and service, while `ArtistsService` owns integration logic. This keeps Nest test modules light and aligns with Nest best practices.
+- **Abortable fetch instead of long-lived HTTP clients** – A simple `fetch` + `AbortController` combo is enough for this single endpoint and lets us surface timeouts explicitly without external dependencies.
+- **Validation at the edge** – Global pipes validate and transform every DTO, preventing stray query params from leaking into business logic. The DTO defaults also document our contract.
+- **Utility extraction** – Helpers like `getDayName`, `normaliseName`, and `toNumber` live in `src/common/utils`, making the service readable and independently testable.
+- **Operational guards** – Throttling and caching at the app module level protect the iTunes API and stabilize responses when traffic spikes.
+
+## Getting started
+
+1. **Install dependencies**
+   ```bash
+   npm install
+   ```
+2. **Configure environment**
+   ```dotenv
+   ITUNES_BASE_URL=https://itunes.apple.com
+   ```
+3. **Run the API**
+   ```bash
+   npm run start:dev
+   ```
+   The service listens on `http://localhost:3000` by default.
+
+## Testing
+
+Unit tests run with Jest:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm test
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+E2E tests run with Jest:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm test:e2e
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+> **Note:** The current Jest (v30) release requires Node.js ≥ 20 because it uses `os.availableParallelism`. Make sure your runtime meets that requirement or downgrade Jest if you need compatibility with older Node versions.
 
-## Resources
+## Project structure
 
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+```
+src
+├── app.module.ts           # Global throttling, caching, and module wiring
+├── main.ts                 # Bootstraps Nest + global ValidationPipe
+├── artists
+│   ├── artists.controller.ts
+│   ├── artists.service.ts
+│   ├── dto
+│   │   ├── artist.dto.ts
+│   │   └── get-artists-today.dto.ts
+├── common
+│   └── utils
+│       ├── getDayName.ts
+│       ├── normaliseName.ts
+│       └── toNumber.ts
+└── config
+    ├── config.module.ts
+    └── env.schema.ts
+```

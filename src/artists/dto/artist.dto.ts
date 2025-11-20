@@ -1,12 +1,12 @@
 export class ArtistDto {
-  id!: number;
-  name!: string;
+  id: number;
+  name: string;
   genre?: string;
 }
 
 export class ArtistsTodayResponseDto {
-  data!: ArtistDto[];
-  meta!: {
+  data: ArtistDto[];
+  meta: {
     total: number;
     page: number;
     limit: number;
