@@ -20,14 +20,14 @@ export class GetArtistsTodayDto {
   genre?: string;
 
   @IsOptional()
-  @Transform(toNumber)
+  @Transform(({ value }) => toNumber({ value }))
   @IsInt()
   @IsPositive()
   @Max(100)
   limit? = 20;
 
   @IsOptional()
-  @Transform(toNumber)
+  @Transform(({ value }) => toNumber({ value }))
   @IsInt()
   @Min(1)
   page? = 1;

@@ -19,7 +19,6 @@ interface ItunesSearchResponse {
 @Injectable()
 export class ArtistsService {
   private readonly baseUrl: string;
-  private readonly defaultSearchTerm = 'music';
   private readonly searchLimit = 200;
   private readonly requestTimeoutMs = 5000;
 
@@ -28,8 +27,8 @@ export class ArtistsService {
   }
 
   async getItems(query: GetArtistsTodayDto): Promise<ArtistsTodayResponseDto> {
-    const artists = await this.fetchArtists();
     const dayInitial = getDayName().charAt(0).toLowerCase();
+    const artists = await this.fetchArtists(dayInitial);
 
     let filtered = artists.filter(
       (artist) =>
@@ -69,12 +68,13 @@ export class ArtistsService {
     };
   }
 
-  private async fetchArtists(): Promise<ArtistDto[]> {
+  private async fetchArtists(dayInitial: string): Promise<ArtistDto[]> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.requestTimeoutMs);
 
     const url = new URL('/search', this.baseUrl);
-    url.searchParams.set('term', this.defaultSearchTerm);
+    url.searchParams.set('term', dayInitial);
+    url.searchParams.set('media', 'music');
     url.searchParams.set('entity', 'musicArtist');
     url.searchParams.set('limit', String(this.searchLimit));
 
@@ -89,13 +89,13 @@ export class ArtistsService {
 
       const payload = (await response.json()) as unknown;
 
+      console.log(payload);
+
       if (!this.isValidItunesResponse(payload)) {
         throw new ServiceUnavailableException(
           'Unexpected response format from iTunes',
         );
       }
-
-      console.log(payload);
 
       return payload.results
         .map((artist) => this.mapArtist(artist))
