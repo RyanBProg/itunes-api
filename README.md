@@ -49,7 +49,7 @@ If no artists match the current day/filters, `data` is an empty array with `tota
    ```bash
    npm install
    ```
-2. **Configure environment**
+2. **Create a .env file**
    ```dotenv
    ITUNES_BASE_URL=https://itunes.apple.com
    ```
